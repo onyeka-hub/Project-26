@@ -644,7 +644,7 @@ First we need to create the credential to connect to the Github account where th
 
 Follow the below steps. NOTE: There is minimal guide on how to do the things listed below
 
-1. Create an access token from GitHub so that Jenkins can use it to connect to the Github account. https://github.com/settings/tokens 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
+1. Create an access token from GitHub so that Jenkins can use it to connect to the Github account. https://github.com/settings/tokens 
 2. Using base64, encode the generated token Z2hwX0hZbFZMcXpaR2o2b0ZUdUkzWDFQYWJTNFJxcEhQdDBIVzJsUw==
 3. Create a secret in the same namespace where Jenkins is installed - tools. Name the key github or whatever you wish. It doesn’t matter what it is called. But, take note of the name you use becuase it will be used elsewhere. See an example below. Replace the value with the encoded token you created earlier.
 ```
