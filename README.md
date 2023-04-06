@@ -31,17 +31,29 @@ By default, Artifactory uses a global virtual repository that is available at ht
 
 - Click on **administration, Repositories** , and **Add repositories as shown in the image below**.
 
+![local repo](./images/local-repo.PNG)
+
 - Since we are exploring **Local Repositories**, select **Local Repository**
+
+![local repo](./images/add-repo.PNG)
+
+![local repo](./images/select-repo.PNG)
 
 - Type **Docker** in the search box and select the **Docker** icon
 
-- In the **Repository Key** box, type in the name of the repository you wh=ish to create. For example **tooling**. So that all the docker images for tooling app can be pushed there.
+- In the **Repository Key** box, type in the name of the repository you whish to create. For example **tooling**. So that all the docker images for tooling app can be pushed there.
+
+![local repo](./images/setup.PNG)
 
 - Click on the **Create Local Repository** button.
 
 - Now you can see that a **Docker Repository** for **tooling** has been created.
 
+![local repo](./images/tooling-repo.PNG)
+
 - Create a second **Local Repository** for **Jenkins**
+
+![local repo](./images/jenkins-repo.PNG)
 
 ## Lets create a Virtual Repository
 
@@ -51,14 +63,19 @@ Remember, a virtual repository aggregates several repositories under a common UR
 
 - Name the **virtual Repository** as you deem fit, click on the **create Virtual Repository** button
 
+![local repo](./images/virtual-repo.PNG)
+
 - Now that the virtual repository is created, it is time to add local repositories to it. You can see in the image below that it is a **virtual** repo, and it will only be used by **Docker**.
 
 - Scroll down the page to see the local repositories. This is where you select which local repository that will be part of the virtual repository. Click on the double arrows to move them.
 
 - Once moved, you will see them in the included items section.
 
+![local repo](./images/adding-repo.PNG)
+
 - To see the address of the virtual repository, simply click on the square icon at the top left, click on **Artifacts** and select the repository you wish to see more information on.
 
+![local repo](./images/repo-url.PNG)
 
 ## Push docker images to the repository
 
@@ -67,6 +84,7 @@ You can either pull and push docker images to the local repository for each appl
 Lets get docker images from docker hub and push to our private registry.
 
 - First you will need to login to the docker registry.
+
 ```
 docker login tooling.artifactory.sandbox.svc.darey.io
 ```
@@ -87,15 +105,30 @@ docker login tooling.artifactory.sandbox.svc.darey.io
 docker pull jenkins/jenkins:jdk11
 ```
 
-- Tag the image so that it can pushed to Artifactory. The image below shows how to get the repository URL address. 
+- Tag the image so that it can be pushed to Artifactory.
+
+By default, Artifactory as Docker registry is configured with Repository path method. which means, that for pulling and pushing docker images, you will need to append the **url** with **repository key** and **image name** and **tag**.
+
+For example:
+
+Assuming the docker image is jenkins and the tag is jdk11. The Artifactory docker repository is of type local and the repository key is jenkins.
+
+Back to the example above,
+
 ```
-docker tag jenkins/jenkins:jdk11 https://tooling.artifactory.sandbox.svc.darey.io/jenkins/jenkins:jdk11
+docker tag jenkins/jenkins:jdk11 tooling.artifactory.onyeka.ga/jenkins/jenkins:jdk11
 ```
 
 - Push the docker image to Artifactory
 ```
-docker push tooling.artifactory.sandbox.svc.darey.io/jenkins/jenkins:jdk11
+docker push tooling.artifactory.onyeka.ga/jenkins/jenkins:jdk11
 ```
+
+- Pull the docker image from Artifactory
+```
+docker pull https://tooling.artifactory.onyeka.ga/jenkins/jenkins:jdk11
+```
+
 
 ## Jenkins pipeline for Business Applications
 
@@ -113,7 +146,7 @@ Therefore, we will begin with the first one. But without jumping straight to cre
 - Using helm, deploy Jenkins and sonarqube into the **tools** namespace.
 - Configure TLS based ingress for both Jenkins and Sonarqube. (Use the Helm Values to configure Ingress directly)
 - Create a Multibranch pipeline for the tooling app.
-- Connect the tooling app from Github https://github.com/darey-devops/tooling
+- Connect the tooling app from Github **https://github.com/darey-devops/tooling**
 
 If you were able to successfully implement that challenge, then thumbs up to you.
 
@@ -127,10 +160,32 @@ Lets go through each of the steps.
 2. Configure DNS for jenkins and route traffic to the ingress controller load balancer
 3. Deploy an ingress without TLS
 4. Ensure that you are able to access the configured URL
+
+![jenkins page](./images/jenkins-page.PNG)
+
 5. Ensure that you are able to logon to Jenkiins.
+```
+$ kubectl exec -it jenkins-0 -c jenkins -n tools -- bash
+jenkins@jenkins-0:/$ ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+jenkins@jenkins-0:/$ cd run
+jenkins@jenkins-0:/run$ ls
+lock  secrets  utmp
+jenkins@jenkins-0:/run$ cd secrets/additional/
+jenkins@jenkins-0:/run/secrets/additional$ ls
+chart-admin-password  chart-admin-username
+jenkins@jenkins-0:/run/secrets/additional$ cat chart-admin-password 
+FDgkXh9NsiHkuzTT6xqGT9jenkins@jenkins-0:/run/secrets/additional$ cat chart-admin-username 
+adminjenkins@jenkins-0:/run/secrets/additional$ 
+```
+
+![jenkins page](./images/jenkins-password-username.PNG)
+
 6. Update the Ingress and configure TLS for the URL
 
-**Phase 2** – Use an override values file to customize Jenkins deployment (You will be guided in this part)
+![jenkins page](./images/jenkins-page-ssl.PNG)
+
+### Phase 2 – Use an override values file to customize Jenkins deployment
 
 The default helm values file has so many configuration tweaks to customize Jenkins. We will explore some of these and ensure that all desired configuration is done using the helm values only. For example, using another YAML file to configure the ingress is removed.
 
@@ -145,22 +200,27 @@ Lets get started (Note that the version numbers in provided screenshots or code 
 
 1. Configure Jenkins Ingress using Helm Values
 - Delete the previous Ingress using kubectl delete command.
+```
+kubectl delete ing ingress-tooling -n tools
+ingress.networking.k8s.io "ingress-tooling" deleted
+```
+
 - Create a new file and name it jenkins-values-overide.yaml
 - Find the below section in the default values file. Copy and paste it exactly in the jenkins-values-overide.yaml
 
 ```
 controller:
- # Used for label app.kubernetes.io/component
-componentName: "jenkins-controller"
-image: "jenkins/jenkins"
- # tag: "2.332.3-jdk11"
-tagLabel: jdk11
-imagePullPolicy: "Always"
+  # Used for label app.kubernetes.io/component
+  componentName: "jenkins-controller"
+  image: "jenkins/jenkins"
+  # tag: "2.387.1-jdk11"
+  tagLabel: jdk11
+  imagePullPolicy: "Always"
 ```
 
 - Then do a helm upgrade using the jenkins-values-overide.yaml file
 ```
- helm upgrade -i jenkinsjenkinsci/jenkins-n tools -f jenkins-values-overide.yaml
+helm upgrade -i jenkins jenkins/jenkins -f jenkins-values-overide.yaml -n tools
 ```
 
 - This should do an upgrade, but without any specific changes to the existing deployment. Thats because no configuration change has occured. All we now have is a shortened values file that can be easily read without too many options. With this file you can now start making configuration updates.
@@ -209,16 +269,18 @@ tls:
 - The final output should look similar to this
 ```
 ingress:
-  enabled: true
-  apiVersion: "extensions/v1beta1"
-  annotations: 
-    cert-manager.io/cluster-issuer: "letsencrypt-production"
-    kubernetes.io/ingress.class: nginx
-  hostName: tooling.jenkins.sandbox.svc.darey.io
-  tls:
-  - secretName: tooling.jenkins.sandbox.svc.darey.io
-    hosts:
-      - tooling.jenkins.sandbox.svc.darey.io
+    enabled: true
+    apiVersion: "extensions/v1beta1"
+    annotations: 
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  
+    hostName: tooling.jenkins.onyeka.ga
+    tls:
+    - secretName: tooling.jenkins.onyeka.ga
+      hosts:
+        - tooling.jenkins.onyeka.ga
+
 ```
 
 - Now upgrade the Jenkins deployment with helm upgrade command. Remember to specify the override yaml file with the -f file.
@@ -285,13 +347,19 @@ If you need to include more plugins, you can use the **additionalPlugins: []** k
 
 ```
   additionalPlugins:
-    -blueocean:1.25.5    -credentials-binding:1.24    -git-changelog:3.0    -git-client:3.6.0    -git-server:1.9    -git:4.5.1
+    - blueocean:1.27.3
+    - credentials-binding:1.24
+    - git-changelog:3.0
+    - git-client:3.6.0
+    - git-server:1.9
+    - git:4.5.1
 ```
 
 If you are wondering how to get the correct plugin version number, it is already provided on the same website where each plugin is documented at https://plugins.jenkins.io/
 
 Lets take the Blue Ocean plugin as an example. Navigate to https://plugins.jenkins.io/blueocean/ and see the Version section as shown below.
 
+![jenkins page](./images/blueocean-plugin.PNG)
 
 **Option 2** requires an extra overhead. Because you must create a Dockerfile for the Jenkins Controller or (Master), package the Jenkins docker image with the plugins already installed, then update the image: value in the helm values override file. The good thing about this approach, despite its overhead is that even when the Kubernetes cluster is locked down in a private network, the dependencies are already packaged into the image and there is no need to download anything from the internet.
 
@@ -301,69 +369,203 @@ Lets see what this process would look like.
 ```
      ├── Dockerfile
      └── scripts
-         └── install-plugins.sh
+         └── plugins.txt
+             plugins2.txt
 ```
 
-    - Update the Dockerfile with below content
-    ```
-    FROM jenkins/jenkins:2.354-jdk11
+- Update the Dockerfile with below content
 
-    USER root
-
-    COPYscripts/ /opt/scripts/
-    RUNapt-get update && apt-get -y upgrade && \ chmod u+x /opt/scripts/install-plugins.sh && \ /opt/scripts/install-plugins.sh
-    USER jenkins
-    ```
-
-    **Self Challenge Task:** Analyse the above Dockerfile and attempt to summarise each step.
-
-- Update the install-plugins.sh file with below bash script.
 ```
-     #!/bin/bash
+FROM jenkins/jenkins:lts-jdk11
 
-     # A variable to hold an array of all the plugins to be installed
+COPY --chown=jenkins:jenkins scripts/plugins.txt /usr/share/jenkins/ref/plugins.txt
 
-     plugins=(
-     workflow-basic-steps:948.v2c72a_091b_b_68
-     blueocean:1.25.5
-     credentials-binding:1.24
-     git-changelog:3.0
-     git-client:3.6.0
-     git-server:1.9
-     git:4.5.1
-     )
-
-     # A for loop to iterate over the plugins array, and execute the jenkins-plugin-cli command to instal each plugin.
-
-     for plugin in "${plugins[@]}"
-     do
-       echo "Installing ${plugin}"
-       jenkins-plugin-cli --plugins ${plugin}
-     done
+RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins.txt
 ```
 
-- Run docker commands to build, tag and push the docker image to the artifactory registry you created in previous project.
+**Self Challenge Task:** Analyse the above Dockerfile and attempt to summarise each step.
+
+- Update the plugins.txt file with below list of plugins.
+```
+workflow-basic-steps:1010.vf7a_b_98e847c1 
+blueocean:1.27.3 
+credentials-binding:523.vd859a_4b_122e6
+git:5.0.0 
+git-changelog:3.0 
+git-client:4.2.0
+git-server:1.9 
+blueocean-bitbucket-pipeline:1.27.3 
+cloudbees-bitbucket-branch-source:800.va_b_b_9a_a_5035c1 
+blueocean-git-pipeline:1.27.3 
+blueocean-pipeline-api-impl:1.27.3 
+pipeline-model-definition:2.2125.vddb_a_44a_d605e
+github-branch-source:1703.vd5a_2b_29c6cdc
+```
+
+- Run docker commands to build, tag and push the docker image to my dockerhub account and pull from there first.
+```
+docker build . -t onyekaonu/jenkins:lts-jdk11.01
+
+docker push onyekaonu/jenkins:lts-jdk11.01
+```
+
+- push the docker image to the artifactory registry you created in previous project.
 
 - Update the Jenkins helm values and point the new image to the private docker registry for Jenkins. Also, ensure that the values file have these keys set:
 ```
- installPlugins: []
+ installPlugins: false
  additionalPlugins: []
 ```
+```
+helm upgrade -i jenkins jenkins/jenkins -f jenkins-values-overide.yaml -n tools
+```
+
 - Login to Jenkins and verify that the plugins have been installed.
-    - Another way to verify the installation of the plugins is to exec into the pod container and check the filesystem. The command ls -ltr /var/jenkins_home/plugins/ | grep blueocean should return files relating to the plugin. If it returns empty, then the plugin has not been installed.
-    ```
-    kubectl exec -it jenkins-0 -n tools -- bash
 
-    echo $JENKINS_HOME
-    /var/jenkins_home
+  - kubectl exec -it jenkins-0 -c jenkins -n tools -- bash
 
-    ls -ltr /var/jenkins_home/plugins/ | grep blueocean
-    ```
-1. Automating Jenkins Configuration As Code (JCasC)
+  - Another way to verify the installation of the plugins is to exec into the pod container and check the filesystem. The command 
+  ```
+  ls -ltr /var/jenkins_home/plugins/ | grep blueocean
+  ```
+  
+  should return files relating to the plugin. If it returns empty, then the plugin has not been installed.
 
-Managing infrastructure “as code” is not only when you provision compute resources in the cloud or on-premise. Being able to reproduce and/or restore an entire environment within minutes extends beyond compute resourc eprovisioning, but also its configuration. There is so much configuration that can be done with Jenkins. Manually updating such configs from the user interface (UI) is not sustainable. Imagine creating a lot of folders to manage multiple projects and pipelines from the Jenkins UI and losing the Jenkins installation afterwards. You will have to manually recreate all the folders again. With Jenkins Configuration As Code (JCasC), this process can be automated and all configurations in Jenkins can now be represented as “code”
+Lets install the complete plugins for jenkins image with the below necessary plugins. Below is the exact **plugins2.txt** file used for that image tag.
+```
+ace-editor:1.1
+ansicolor:1.0.2
+antisamy-markup-formatter:159.v25b_c67cd35fb_
+apache-httpcomponents-client-4-api:4.5.14-150.v7a_b_9d17134a_5
+authentication-tokens:1.4
+badge:1.9.1
+blueocean-bitbucket-pipeline:1.27.3
+blueocean:1.27.3
+blueocean-jwt:1.27.3
+blueocean-git-pipeline:1.27.3 
+blueocean-pipeline-api-impl:1.27.3
+blueocean-rest-impl:1.27.3
+bootstrap4-api:4.6.0-5
+bootstrap5-api:5.2.2-2
+bouncycastle-api:2.27
+branch-api:2.1071.v1a_188a_562481
+build-blocker-plugin:1.7.8
+build-monitor-plugin:1.13+build.202205140447
+buildtriggerbadge:251.vdf6ef853f3f5
+cloudbees-bitbucket-branch-source:800.va_b_b_9a_a_5035c1
+credentials-binding:523.vd859a_4b_122e6
+checks-api:1.8.1
+cloudbees-folder:6.758.vfd75d09eea_a_1
+command-launcher:90.v669d7ccb_7c31
+configuration-as-code:1569.vb_72405b_80249
+config-file-provider:3.11.1
+credentials:1189.vf61b_a_5e2f62e
+dashboard-view:2.466.vdfefd95a_b_f8d
+dependency-check-jenkins-plugin:5.2.0
+display-url-api:2.3.7
+disk-usage:0.28
+durable-task:504.vb10d1ae5ba2f
+echarts-api:5.4.0-1
+email-ext:2.92
+font-awesome-api:6.3.0-1
+git:5.0.0 
+git-changelog:3.0 
+git-client:4.2.0
+git-server:1.11
+github-branch-source:1703.vd5a_2b_29c6cdc
+groovy-postbuild:2.5
+greenballs:1.15.1
+handlebars:3.0.8
+hashicorp-vault-plugin:360.v0a_1c04cf807d
+htmlpublisher:1.31
+jackson2-api:2.14.2-319.v37853346a_229
+jacoco:3.3.2.1
+jdk-tool:63.v62d2fd4b_4793
+job-dsl:1.81.1
+jquery-detached:1.2.1
+jquery3-api:3.6.1-2
+jsch:0.1.55.61.va_e9ee26616e7
+junit:1166.1168.vd6b_8042a_06de
+kubernetes-client-api:6.4.1-208.vfe09a_9362c2c
+kubernetes-credentials:0.10.0
+kubernetes:3743.v1fa_4c724c3b_7
+ldap:659.v8ca_b_a_fe79fa_d
+lockable-resources:2.18
+mailer:448.v5b_97805e3767
+mask-passwords:3.3
+matrix-auth:3.1.5
+matrix-project:785.v06b_7f47b_c631
+metrics:4.2.13-420.vea_2f17932dd6
+momentjs:1.1.1
+pipeline-build-step:488.v8993df156e8d
+pipeline-graph-analysis:202.va_d268e64deb_3
+pipeline-input-step:466.v6d0a_5df34f81
+pipeline-milestone-step:111.v449306f708b_7
+pipeline-model-api:2.2125.vddb_a_44a_d605e
+pipeline-model-definition:2.2125.vddb_a_44a_d605e
+pipeline-model-extensions:2.2125.vddb_a_44a_d605e
+pipeline-rest-api:2.28
+pipeline-stage-step:305.ve96d0205c1c6
+pipeline-stage-tags-metadata:2.2125.vddb_a_44a_d605e
+pipeline-stage-view:2.28
+plain-credentials:143.v1b_df8b_d3b_e48
+plugin-util-api:3.0.0
+popper-api:1.16.1-3
+parameterized-scheduler:1.1
+rebuild:1.34
+role-strategy:587.588.v850a_20a_30162
+scm-api:631.v9143df5b_e4a_a
+script-security:1229.v4880b_b_e905a_6
+snakeyaml-api:1.33-90.v80dcb_3814d35
+soapui-pro-functional-testing:1.7
+sonar:2.14
+simple-theme-plugin:136.v23a_15f86c53d
+ssh-credentials:305.v8f4381501156
+structs:324.va_f5d6774f3a_d
+token-macro:321.vd7cc1f2a_52c8
+trilead-api:2.84.v72119de229b_7
+text-finder:1.21
+uno-choice:2.6.4
+variant:59.vf075fe829ccb
+workflow-basic-steps:1010.vf7a_b_98e847c1 
+workflow-aggregator:596.v8c21c963d92d
+workflow-api:1208.v0cc7c6e0da_9e
+workflow-cps-global-lib:609.vd95673f149b_b
+workflow-cps:3641.vf58904a_b_b_5d8
+workflow-durable-task-step:1234.v019404b_3832a
+workflow-job:1284.v2fe8ed4573d4
+workflow-multibranch:733.v109046189126
+workflow-scm-step:408.v7d5b_135a_b_d49
+workflow-step-api:639.v6eca_cd8c04a_a_
+workflow-support:839.v35e2736cfd5c
+```
 
 Ensure that all the installed plugins are using the latest version. Visit https://plugins.jenkins.io/, then search for the plugin to get the latest version number.
+
+- Update the Dockerfile with below content
+```
+FROM jenkins/jenkins:2.387.2-lts-jdk11
+
+COPY --chown=jenkins:jenkins scripts/plugins2.txt /usr/share/jenkins/ref/plugins2.txt
+
+RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins2.txt
+```
+
+- Run docker commands to build, tag and push the docker image to my dockerhub account and pull from there first.
+```
+docker build . -t onyekaonu/jenkins:2.387.2-lts-jdk11.01
+
+docker push onyekaonu/jenkins:2.387.2-lts-jdk11.01
+```
+
+- Update the Jenkins helm values and point the new image to the private docker registry for Jenkins.
+
+![jenkins page](./images/jenkins-page-plugins.PNG)
+
+
+1. Automating Jenkins Configuration As Code (JCasC)
+
+Managing infrastructure “as code” is not only when you provision compute resources in the cloud or on-premise. Being able to reproduce and/or restore an entire environment within minutes extends beyond compute resource provisioning, but also its configuration. There is so much configuration that can be done with Jenkins. Manually updating such configs from the user interface (UI) is not sustainable. Imagine creating a lot of folders to manage multiple projects and pipelines from the Jenkins UI and losing the Jenkins installation afterwards. You will have to manually recreate all the folders again. With Jenkins Configuration As Code (JCasC), this process can be automated and all configurations in Jenkins can now be represented as “code”
 
 To start managing Jenkins as code, search for **JCasC**: within the default yaml values file. That is the section where configuration as code needs to be configured.
 
@@ -371,24 +573,24 @@ Copy that section out of the default and put it in the override yaml file.
 
 ```
 JCasC:
-defaultConfig: true
-configScripts: {}
+  defaultConfig: true
+  configScripts: {}
     # welcome-message: |
-    # jenkins:
-    # systemMessage: Welcome to our CI\CD server. This Jenkins is configured and managed 'as code'.
+      # jenkins:
+          # systemMessage: Welcome to our CI\CD server. This Jenkins is configured and managed 'as code'.
     # Ignored if securityRealm is defined in controller.JCasC.configScripts and
-securityRealm: |-
-local:
-allowsSignup: false
-enableCaptcha: false
-users:
-- id: "${chart-admin-username}"
-name: "Jenkins Admin"
-password: "${chart-admin-password}"
+    securityRealm: |-
+      local:
+        allowsSignup: false
+        enableCaptcha: false
+        users:
+        - id: "${chart-admin-username}"
+          name: "Jenkins Admin"
+          password: "${chart-admin-password}"
     # Ignored if authorizationStrategy is defined in controller.JCasC.configScripts
-authorizationStrategy: |-
-loggedInUsersCanDoAnything:
-allowAnonymousRead: false
+    authorizationStrategy: |-
+      loggedInUsersCanDoAnything:
+        allowAnonymousRead: false
 ```
 
 The **configScripts: {}** key shows that it is empty. The curly brackets **{}** indicates that it is configured to hold a dictionary type of data. This means that it can hold sub-keys with their own respective key and values. As you can see in the example below it.
@@ -406,11 +608,12 @@ To enable that section, simply remove the {} and uncomment the first key **welco
     configScripts:
       welcome-message: |
         jenkins:
-          systemMessage: Welcome to Darey.io Multi-tenant CI\CD server.  This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
+          systemMessage: Welcome to onyeka.ga Multi-tenant CI\CD server.  This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
 ```
 
 Upgrade Jenkins with the latest update and you should see the system message like below.
 
+![jenkins page](./images/jenkins-page-message.PNG)
 
 The JCasC functionality is actually a Jenkins plugin. It is one of the most interesting plugins that makes configuring Jenkins very easy. It’s source code can be found here https://github.com/jenkinsci/configuration-as-code-plugin
 
@@ -429,46 +632,49 @@ Now let’s see the latest configuration applied to Jenkins through JCasC and He
 2. Click on View Configuration
 
 3. You will see the updated code configuration here.
-```
-![](./images/JCasC3.png)
-```
+
+![jenkins page](./images/jenkins-page-casc.PNG)
 
 Another example of automating Jenkins as code, is to create a multibranch pipline as part of Jenkins bootstrapping. Rather than going into the console to manually configure a pipeline.
 
 Lets automate the creation of the tooling application’s pipeline.
 
+## Step 1
 First we need to create the credential to connect to the Github account where the tooling app is. If you have been following the PBL projects from Project 6, then you should already have the tooling app forked into your github account. If not, go ahead and fork it from here – Tooling App https://github.com/darey-devops/tooling
 
 Follow the below steps. NOTE: There is minimal guide on how to do the things listed below
 
-1. Create an access token from GitHub so that Jenkins canm use it to connect to the Github account. https://github.com/settings/tokens
-2. Using base64, encode the generated token
-3. Create a secret in the same namespace where Jenkins is installed. Name the key github_token or whatever you wish. It doesn’t matter what it is called. But, take note of the name you use becuase it will be used elsewhere. See an example below. Replace the value with the encoded token you created earlier.
+1. Create an access token from GitHub so that Jenkins can use it to connect to the Github account. https://github.com/settings/tokens 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
+2. Using base64, encode the generated token Z2hwX0hZbFZMcXpaR2o2b0ZUdUkzWDFQYWJTNFJxcEhQdDBIVzJsUw==
+3. Create a secret in the same namespace where Jenkins is installed - tools. Name the key github or whatever you wish. It doesn’t matter what it is called. But, take note of the name you use becuase it will be used elsewhere. See an example below. Replace the value with the encoded token you created earlier.
 ```
 apiVersion: v1
-data:
-github_token: Z2hwXzZQNThsUUNlfdjhfGakRLNDc1Q1FsS3BmZGU0Zk02ZjJDb1VCTA==
 kind: Secret
 metadata:
-name: github
+  name: github
 type: Opaque
+data:
+  github_token: Z2hwX0hZbFZMcXpaR2o2b0ZUdUkzWDFQYWJTNFJxcEhQdDBIVzJsUw==
+```
+
+```
+kubectl apply -f jenkins-secret.yaml -n tools
 ```
 
 In the Jenkins values file, you will set the values correctly so that the secret created above can be used. If you click here to see the documentation in artifacthub.io https://artifacthub.io/packages/helm/jenkinsci/jenkins?modal=values&path=controller.initScripts, as shown in the image below.
 
 
-
 Let’s analyse what is written there.
 
-- **‘name’ is a name of an existing secret in same namespace as jenkins**. This refers to the secret created above. github
+- **‘name’ is a name of an existing secret in same namespace as jenkins**. This refers to the secret created above. **github**
 - **‘keyName’ is the name of one of the keys inside current secret**. This refers to the key specified in the secret. **github_token**
 - **the ‘name’ and ‘keyName’ are concatenated with a ‘-‘ in between**, so for example:. Therefore we will have this **github-github_token**
 
 In the values file, we now need to update the key additionalExistingSecrets:
 ```
   additionalExistingSecrets:
-    - name: github
-      keyName: github_token
+  - name: github
+    keyName: github_token
 ```
 
 **Note**: This is just to make Jenkins aware of the secret. We still need to use it in the credentials section so that Jenkins can connect to Github with it.
@@ -477,203 +683,108 @@ Then, create a folder to hold your pipelines
 
 ```
   JCasC:
-    enabled: true
-    configScripts:
+    configScripts: 
       welcome-message: |
         jenkins:
-          systemMessage: Welcome to Darey.io Multi-tenant CI\CD server.  This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
+          systemMessage: Welcome to onyeka.ga Multi-tenant CI\CD server. This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
       pipeline: |
         jobs:
           - script: >
-              folder('DAREY.IO') {
-                displayName('DAREY.IO')
-                description('Contains DAREY.IO Jenkins Pipelines')
+              folder('onyeka.ga') {
+                displayName('onyeka.ga')
+                description('Contains onyeka.ga Jenkins Pipelines')
               }
 ```
 
 When you apply the latest changes, you should be able to see the folder created as shown below. But it doesn’t have any pipline.
 
-
+![jenkins page](./images/jenkins-page-folder.PNG)
 
 Now, Lets create a pipline that will automatically be added to the folder upon installation.
 
 The entire overide values file should look like this.
 
 ```
+
 controller:
-image: "dareyregistry/jenkins"
-tag: "2.357-jdk11.03"
-ingress:
-enabled: true
-apiVersion: "extensions/v1beta1"
-annotations: 
-      cert-manager.io/cluster-issuer: "letsencrypt-production"
+  image: "onyekaonu/jenkins"
+  tag: "2.387.2-lts-jdk11.01"
+
+  ingress:
+    enabled: true
+    apiVersion: "extensions/v1beta1"
+    annotations: 
       kubernetes.io/ingress.class: nginx
-hostName: tooling.jenkins.sandbox.svc.darey.io
-tls:
-- secretName: tooling.jenkins.sandbox.svc.darey.io
-hosts:
-- tooling.jenkins.sandbox.svc.darey.io
-installPlugins: []
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  
+    hostName: tooling.jenkins.onyeka.ga
+    tls:
+    - secretName: tooling.jenkins.onyeka.ga
+      hosts:
+        - tooling.jenkins.onyeka.ga
 
-additionalExistingSecrets:
-- name: github
-keyName: github_token
+  installPlugins: false
+  additionalPlugins: []
 
-JCasC:
-enabled: true
-configScripts:
-welcome-message: |jenkins:
-systemMessage: Welcome to Darey.io Multi-tenant CI\CD server.  This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
-pipeline: |jobs:
-- script: > folder('DAREY.IO') { displayName('DAREY.IO') description('Contains DAREY.IO Jenkins Pipelines') }- script: > multibranchPipelineJob('DAREY.IO/tooling-app') { branchSources { git { remote('https://github.com/darey-devops/tooling.git') credentialsId('github') id('tooling-app') } } }security-config: |credentials:
-system:
-domainCredentials:
-- credentials:
-- usernamePassword:
-id: github
-username: darey-io
-password: ${github-github_token}
-scope: GLOBAL
-description: Github
+  additionalExistingSecrets:
+  - name: github
+    keyName: github_token
+
+  JCasC:
+    configScripts: 
+      welcome-message: |
+        jenkins:
+          systemMessage: Welcome to onyeka.ga Multi-tenant CI\CD server. This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
+      pipeline: |
+        jobs:
+          - script: >
+              folder('onyeka.ga') {
+                displayName('onyeka.ga')
+                description('Contains onyeka.ga Jenkins Pipelines')
+              }
+          - script: >
+              multibranchPipelineJob('onyeka.ga/tooling-app') {
+                branchSources {
+                  git {
+                    remote('https://github.com/onyeka-hub/tooling.git')
+                    credentialsId('github')
+                    id('tooling-app') 
+                   }
+                }
+              }
+      security-config: |
+        credentials:
+          system:
+            domainCredentials:
+            - credentials:
+              - usernamePassword:
+                  id: github
+                  username: onyeka-hub
+                  password: ${github-github_token}
+                  scope: GLOBAL
+                  description: Github
 ```
 
 The most important part you must take note of is the credentials section where the secret we created earlier is used. Remember, the first part is the secret name **github**, while the second part is the “key name” used in the secret. **github_token**. Both are concatenated with an “hyphen”
 
-
-
-The jenkins image used in the above values already has all the necessary plugins. Below is the exact **install-plugins.sh** script used for that image tag. You can use it for most use cases. But always remember to go to https://plugins.jenkins.io/ to search for plugins and get the latest version.
-
-```
-#!/bin/bash
-plugins=(
-workflow-basic-steps:948.v2c72a_091b_b_68
-ace-editor:1.1
-ansicolor:0.7.3
-antisamy-markup-formatter:2.1
-apache-httpcomponents-client-4-api:4.5.13-1.0
-authentication-tokens:1.4
-badge:1.8
-bootstrap4-api:4.5.3-1
-bouncycastle-api:2.18
-branch-api:2.6.3
-build-blocker-plugin:1.7.3
-build-monitor-plugin:latest
-blueocean:1.25.5
-checks-api:1.2.0
-cloudbees-folder:6.15
-command-launcher:1.5
-configuration-as-code:1464.vd8507b_82e41a_
-config-file-provider:3.7.0
-credentials-binding:523.vd859a_4b_122e6
-credentials:1139.veb_9579fca_33b_
-dashboard-view:2.14
-dependency-check-jenkins-plugin:5.1.1
-display-url-api:2.3.4
-durable-task:1.35
-echarts-api:4.9.0-2
-email-ext:2.80
-font-awesome-api:5.15.1-1
-git-changelog:3.0
-git-client:3.6.0
-git-server:1.9
-git:4.11.3
-groovy-postbuild:2.5
-handlebars:1.1.1
-hashicorp-vault-plugin:3.7.0
-htmlpublisher:1.25
-jackson2-api:2.12.1
-jacoco:3.1.0
-jdk-tool:1.4
-job-dsl:1.77
-jquery-detached:1.2.1
-jquery3-api:3.5.1-2
-jsch:0.1.55.2
-junit:1.48
-kubernetes-client-api:5.12.2-193.v26a_6078f65a_9
-kubernetes-credentials:0.9.0
-kubernetes:3651.v908e7db_10d06
-ldap:2.2
-lockable-resources:2.10
-mailer:1.32.1
-mask-passwords:3.0
-matrix-auth:2.6.4
-matrix-project:1.18
-metrics:4.0.2.6
-momentjs:1.1.1
-pipeline-build-step:2.13
-pipeline-graph-analysis:1.10
-pipeline-input-step:2.12
-pipeline-milestone-step:1.3.1
-pipeline-model-api:1.7.2
-pipeline-model-definition:1.7.2
-pipeline-model-extensions:1.7.2
-pipeline-rest-api:2.19
-pipeline-stage-step:2.5
-pipeline-stage-tags-metadata:1.7.2
-pipeline-stage-view:2.19
-plain-credentials:1.7
-plugin-util-api:1.6.1
-popper-api:1.16.0-7
-rebuild:1.31
-role-strategy:3.1
-scm-api:2.6.4
-script-security:1.75
-snakeyaml-api:1.27.0
-soapui-pro-functional-testing:1.6
-sonar:2.13
-ssh-credentials:1.18.1
-structs:1.20
-token-macro:2.14
-trilead-api:1.0.13
-uno-choice:2.5.1
-variant:1.4
-workflow-aggregator:2.6
-workflow-api:2.40
-workflow-cps-global-lib:2.17
-workflow-cps:2.87
-workflow-durable-task-step:2.37
-workflow-job:2.40
-workflow-multibranch:2.22
-workflow-scm-step:2.11
-workflow-step-api:2.23
-workflow-support:3.7
-parameterized-scheduler:0.9.2
-buildtriggerbadge:2.10
-simple-theme-plugin:0.6
-disk-usage:0.28
-greenballs:1.15.1
-text-finder:1.15
-)
-
-for plugin in "${plugins[@]}"
-do
-  echo "Installing ${plugin}"
-  jenkins-plugin-cli --plugins ${plugin}
-done
-```
-
 You can see the multiPipelineJob now created.
 
-
+![jenkins page](./images/jenkins-page-pipeline.PNG)
 
 All the branches have automatically triggered their respective pipeliines.
 
-
+![jenkins page](./images/jenkins-page-pipeline-branches.PNG)
 
 This implementation is ideal, and gives the confidence of a re-usable code and infrastructure, should anything go wrong, you can easily recreate all you have configured.
 
 You should also explore the JCasC section and see all the configured credentials and pipelines.
 
-
-
 You can now create more secrets to connect to other tools, such as Sonarqube, AWS, KUBECONFIG etc…
 
-Congratulations for completing Project 26.
 
 Now, attempt to configure a remote artifactory repository.
 
-1. Create a remote repository in Artifactory, so that instead of pulling helm charts directly from https://charts.jenkins.io for example, you will pulling directly from your configured remote repository in Artifactory. This helps organisations stay secure. Artifactroy will therefore be a proxy to pulling from the internet.
+1. Create a remote repository in Artifactory, so that instead of pulling helm charts directly from https://charts.jenkins.io for example, you will pull directly from your configured remote repository in Artifactory. This helps organisations stay secure. Artifactroy will therefore be a proxy to pulling from the internet.
 2. Configure remote repository for the following chart repos, search the repos and try to install tools from them through the Artifactroy remote repository you have configured.
 
 ```
@@ -697,6 +808,15 @@ cert-manager            https://charts.jetstack.io
 nginx                   https://helm.nginx.com/stable
 sonarqube               https://SonarSource.github.io/helm-chart-sonarqube
 istio                   https://istio-release.storage.googleapis.com/charts
+```
+
+For upgrading and troubleshooting
+```
+helm upgrade -i ingress-nginx ingress-nginx/ingress-nginx --set controller.service.type=ClusterIP -n ingress-nginx
+
+helm upgrade -i ingress-nginx ingress-nginx/ingress-nginx --set controller.service.type=LoadBalancer -n ingress-nginx
+
+helm upgrade -i ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx
 ```
 
 In the next section we will leverage what we have done so far, and make some more sense of it all. You will gain hands-on experience;

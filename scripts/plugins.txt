@@ -1,0 +1,13 @@
+workflow-basic-steps:1010.vf7a_b_98e847c1 
+blueocean:1.27.3 
+credentials-binding:523.vd859a_4b_122e6
+git:5.0.0 
+git-changelog:3.0 
+git-client:4.2.0
+git-server:1.9 
+blueocean-bitbucket-pipeline:1.27.3 
+cloudbees-bitbucket-branch-source:800.va_b_b_9a_a_5035c1 
+blueocean-git-pipeline:1.27.3 
+blueocean-pipeline-api-impl:1.27.3 
+pipeline-model-definition:2.2125.vddb_a_44a_d605e
+github-branch-source:1703.vd5a_2b_29c6cdc

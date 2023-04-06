@@ -1,0 +1,58 @@
+
+controller:
+  image: "onyekaonu/jenkins"
+  tag: "2.387.2-lts-jdk11.01"
+
+  ingress:
+    enabled: true
+    apiVersion: "extensions/v1beta1"
+    annotations: 
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  
+    hostName: tooling.jenkins.onyeka.ga
+    tls:
+    - secretName: tooling.jenkins.onyeka.ga
+      hosts:
+        - tooling.jenkins.onyeka.ga
+
+  installPlugins: false
+  additionalPlugins: []
+
+  additionalExistingSecrets:
+  - name: github
+    keyName: github_token
+
+  JCasC:
+    configScripts: 
+      welcome-message: |
+        jenkins:
+          systemMessage: Welcome to onyeka.ga Multi-tenant CI\CD server. This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
+      pipeline: |
+        jobs:
+          - script: >
+              folder('onyeka.ga') {
+                displayName('onyeka.ga')
+                description('Contains onyeka.ga Jenkins Pipelines')
+              }
+          - script: >
+              multibranchPipelineJob('onyeka.ga/tooling-app') {
+                branchSources {
+                  git {
+                    remote('https://github.com/onyeka-hub/tooling.git')
+                    credentialsId('github')
+                    id('tooling-app') 
+                   }
+                }
+              }
+      security-config: |
+        credentials:
+          system:
+            domainCredentials:
+            - credentials:
+              - usernamePassword:
+                  id: github
+                  username: onyeka-hub
+                  password: ${github-github_token}
+                  scope: GLOBAL
+                  description: Github
