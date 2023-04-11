@@ -4,6 +4,7 @@ metadata:
   name: ingress-tooling
   namespace: tools
   annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
@@ -18,8 +19,23 @@ spec:
             name: jenkins
             port:
               number: 8080
+  - host: "tooling.artifactory.onyeka.ga"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: artifactory-artifactory-nginx
+            port:
+              number: 80
   tls:
   - hosts:
     - "tooling.jenkins.onyeka.ga"
     secretName: "tooling.jenkins.onyeka.ga"
-  
+  - hosts:
+    - "tooling.artifactory.onyeka.ga"
+    secretName: "tooling.artifactory.onyeka.ga"
+
+
+

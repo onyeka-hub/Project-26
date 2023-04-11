@@ -86,7 +86,7 @@ Lets get docker images from docker hub and push to our private registry.
 - First you will need to login to the docker registry.
 
 ```
-docker login tooling.artifactory.sandbox.svc.darey.io
+docker login tooling.artifactory.onyeka.ga
 ```
 
 - A successful login will create a file here ~/.docker/config.json Explore this file and see how the authentication data is stored. The auth section is an encoding of your username and password. You can try to decode it with base64 to see the output.
@@ -99,10 +99,31 @@ docker login tooling.artifactory.sandbox.svc.darey.io
         }
 }
 ```
+{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "20GB",
+      "enabled": true
+    }
+  },
+  "experimental": false,
+  "features": {
+    "buildkit": true
+  }
+}
+
+Example of docker push or pull and login commands:
+
+docker pull / push <Artifactory Host IP Address>/<REPOSITORY_KEY>/<IMAGE>:<TAG>
+
+docker login -u <USER_NAME> -p <USER_PASSWORD> <Artifactory Host IP Address>
+
+docker login -u admin -p password tooling.artifactory.onyeka.ga
+
 
 - Pull the Jenkins image from Docker hub
 ```
-docker pull jenkins/jenkins:jdk11
+docker pull onyekaonu/jenkins:2.387.2-lts-jdk11.01
 ```
 
 - Tag the image so that it can be pushed to Artifactory.
@@ -111,24 +132,27 @@ By default, Artifactory as Docker registry is configured with Repository path me
 
 For example:
 
-Assuming the docker image is jenkins and the tag is jdk11. The Artifactory docker repository is of type local and the repository key is jenkins.
+Assuming the docker image is onyekaonu/jenkins and the tag is 2.387.2-lts-jdk11.01. The Artifactory docker repository is of type local and the repository key is tooling.
 
 Back to the example above,
 
 ```
-docker tag jenkins/jenkins:jdk11 tooling.artifactory.onyeka.ga/jenkins/jenkins:jdk11
+docker tag onyekaonu/jenkins:2.387.2-lts-jdk11.01 tooling.artifactory.onyeka.ga/tooling/onyekaonu/jenkins:2.387.2-lts-jdk11.01
 ```
 
 - Push the docker image to Artifactory
 ```
-docker push tooling.artifactory.onyeka.ga/jenkins/jenkins:jdk11
+docker push tooling.artifactory.onyeka.ga/tooling/onyekaonu/jenkins:2.387.2-lts-jdk11.01
 ```
 
 - Pull the docker image from Artifactory
 ```
-docker pull https://tooling.artifactory.onyeka.ga/jenkins/jenkins:jdk11
+docker push tooling.artifactory.onyeka.ga/tooling/onyekaonu/jenkins:2.387.2-lts-jdk11.01
 ```
 
+- Run docker commands to build, tag and push the docker image to my artifactory repository and pull from there.
+
+Tag the image so that it can pushed to Artifactory. The image below shows how to get the repository URL address. 
 
 ## Jenkins pipeline for Business Applications
 
@@ -776,6 +800,14 @@ All the branches have automatically triggered their respective pipeliines.
 ![jenkins page](./images/jenkins-page-pipeline-branches.PNG)
 
 This implementation is ideal, and gives the confidence of a re-usable code and infrastructure, should anything go wrong, you can easily recreate all you have configured.
+
+### Blocker
+Jenkins not executing jobs (build executor offline, pending - waiting for next executor) 
+
+### Solution
+go to Jenkins -> Manage Jenkins -> Manage Nodes
+examine the "master" node.(Click on configure icon)
+The number of executors was set to 0. Increased it and issue got fixed.
 
 You should also explore the JCasC section and see all the configured credentials and pipelines.
 
