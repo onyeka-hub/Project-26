@@ -3,22 +3,22 @@
 
 In this project, we have quite a lot of exciting things to do. Lets get right into it.
 
-As a follow up from previous project, the first thing you will need to do is create a repository in Artifactory which will serve as a private docker registry. Having a private registry in an enterprise means that there is more control over the containers deployed there. You have control over the secured traffic to the registry, control over storage and you can rely more on the availability of your images.
+As a follow up from previous project, the first thing we will need to do is create a repository in Artifactory which will serve as a private docker registry. Having a private registry in an enterprise means that there is more control over the containers deployed there. You have control over the secured traffic to the registry, control over storage and you can rely more on the availability of your images.
 
 In Artifactory, you can setup either local, remote or virtual repositories. It doesn’t matter if it is for docker, helm, or standard software binaries.
 
 Artifactory hosts two kinds of repositories: local and remote. Both local and remote repositories can be aggregated under virtual repositories, in order to create controlled domains for artifacts resolution and search, as we will see in the next sections.
 
 ## Local Repositories
-Local repositories are physical locally-managed repositories that one can deploy artifacts into. Artifacts under a local repository are directly accessible via a URL pattern such as **https://tooling.artifactory.sandbox.svc.darey.io/artifactory/<local-repository-name>/<artifact-path>**.
+Local repositories are physical locally-managed repositories that one can deploy artifacts into. Artifacts under a local repository are directly accessible via a URL pattern such as **https://tooling.artifactory.sandbox.svc.darey.io/artifactory/`<local-repository-name>`/`<artifact-path>`**.
 
 ## Remote Repositories
 A remote repositories serves as a caching proxy for a repository managed at a remote URL (including other Artifactory remote repository URLs). Artifacts are stored and updated in remote repositories according to various configuration parameters that control the caching and proxying behavior. You can remove cached artifacts from remote repository caches but you cannot manually deploy anything into a remote repository.
 
 Artifacts under a remote repository are directly accessible via a URL pattern of
 
-- **https://tooling.artifactory.sandbox.svc.darey.io/artifactory/<remote-repository-name>/<artifact-path>**** or
-- **https://tooling.artifactory.sandbox.svc.darey.io/artifactory/<remote-repository-name>-cache/<artifact-path>**
+- **https://tooling.artifactory.sandbox.svc.darey.io/artifactory/`<remote-repository-name>`/`<artifact-path>`**** or
+- **https://tooling.artifactory.sandbox.svc.darey.io/artifactory/`<remote-repository-name>`-cache/`<artifact-path>`**
 
 The second URL will only serve already cached artifacts while the first one will fetch a remote artifact in the cache URL (2nd one) only if it is not already stored in the first URL.
 
@@ -39,19 +39,30 @@ By default, Artifactory uses a global virtual repository that is available at ht
 
 ![local repo](./images/select-repo.PNG)
 
-- Type **Docker** in the search box and select the **Docker** icon
+- Type **Docker** in the search box or select the **Docker** icon
+
+![local repo docker](./images/local-repo-docker.PNG)
+
 
 - In the **Repository Key** box, type in the name of the repository you whish to create. For example **tooling**. So that all the docker images for tooling app can be pushed there.
 
 ![local repo](./images/setup.PNG)
 
 - Click on the **Create Local Repository** button.
+URL - https://tooling.artifactory.onyekaonu.site:80/artifactory/api/docker/tooling
+
+![local repo](./images/docker-repo-successful.PNG)
+
 
 - Now you can see that a **Docker Repository** for **tooling** has been created.
 
 ![local repo](./images/tooling-repo.PNG)
 
 - Create a second **Local Repository** for **Jenkins**
+
+URL - https://tooling.artifactory.onyekaonu.site:80/artifactory/api/docker/jenkins
+
+![jenkins repo](./images/docker-repo-successful-jenkins.PNG)
 
 ![local repo](./images/jenkins-repo.PNG)
 
@@ -62,6 +73,8 @@ Remember, a virtual repository aggregates several repositories under a common UR
 - Select **virtual Repository**
 
 - Name the **virtual Repository** as you deem fit, click on the **create Virtual Repository** button
+
+![virtual repo](./images/virtual-repo-successful.PNG)
 
 ![local repo](./images/virtual-repo.PNG)
 
@@ -85,19 +98,7 @@ Lets get docker images from docker hub and push to our private registry.
 
 - First you will need to login to the docker registry.
 
-```
-docker login tooling.artifactory.onyeka.ga
-```
-
-- A successful login will create a file here ~/.docker/config.json Explore this file and see how the authentication data is stored. The auth section is an encoding of your username and password. You can try to decode it with base64 to see the output.
-```
-{
-        "auths": {
-                "tooling.artifactory.sandbox.svc.darey.io": {
-                        "auth": "YWRtaW46dGVzdF9wYXNzd29yZA=="
-                }
-        }
-}
+Update the docker daemon.json file as below
 ```
 {
   "builder": {
@@ -109,50 +110,78 @@ docker login tooling.artifactory.onyeka.ga
   "experimental": false,
   "features": {
     "buildkit": true
-  }
+  },
+  "insecure-registries": ["http://tooling.artifactory.onyekaonu.site:80"]
+}
+```
+
+Update the docker config.json file as below
+
+To manually set your credentials or if your using Docker V1 copy the following snippet to your config.json file
+```
+{
+        "auths": {
+            "https://tooling.artifactory.onyekaonu.site": {
+                "auth": "username:password", (converted to base 64)
+                "email": "onyekagodonu@yahoo.com"
+                }
+        }
 }
 
-Example of docker push or pull and login commands:
+username = admin
+password = Onyeka123456789
+base 64 encode admin:Onyeka123456789 = YWRtaW46T255ZWthMTIzNDU2Nzg5
 
-docker pull / push <Artifactory Host IP Address>/<REPOSITORY_KEY>/<IMAGE>:<TAG>
+{
+        "auths": {
+            "https://tooling.artifactory.onyekaonu.site": {
+                "auth": "YWRtaW46T255ZWthMTIzNDU2Nzg5",
+                "email": "onyekagodonu@yahoo.com"
+                }
+        }
+}
+```
 
+1. Login to your artifacrory docker repository
+```
 docker login -u <USER_NAME> -p <USER_PASSWORD> <Artifactory Host IP Address>
+docker login -uadmin artprod.mycompany
+docker login -uadmin tooling.artifactory.onyekaonu.site
 
-docker login -u admin -p password tooling.artifactory.onyeka.ga
-
-
-- Pull the Jenkins image from Docker hub
-```
-docker pull onyekaonu/jenkins:2.387.2-lts-jdk11.01
+password = Onyeka123456789 or token
+token: cmVmdGtuOjAxOjE3MzI0NDY2ODc6cFVtUDNwQTRRYmVyYTh3M1Q4cTBpZVVteWd2
 ```
 
-- Tag the image so that it can be pushed to Artifactory.
+2. Pull the Jenkins image from Docker hub
+```
+docker pull onyekaonu/jenkins:2.426.1-lts-jdk11
+```
+
+3. Tag the image so that it can be pushed to Artifactory.
 
 By default, Artifactory as Docker registry is configured with Repository path method. which means, that for pulling and pushing docker images, you will need to append the **url** with **repository key** and **image name** and **tag**.
 
-For example:
-
-Assuming the docker image is onyekaonu/jenkins and the tag is 2.387.2-lts-jdk11.01. The Artifactory docker repository is of type local and the repository key is tooling.
-
-Back to the example above,
+Tag your image using the below commands (replace `<IMAGE ID>`, `<DOCKER REPOSITORY>` and `<DOCKER TAG>` with your values)
 
 ```
-docker tag onyekaonu/jenkins:2.387.2-lts-jdk11.01 tooling.artifactory.onyeka.ga/tooling/onyekaonu/jenkins:2.387.2-lts-jdk11.01
+docker tag jenkins/jenkins:jdk11 https://tooling.artifactory.sandbox.svc.darey.io/jenkins/jenkins:jdk11
+
+docker tag <IMAGE_ID> artprod.mycompany/<DOCKER_REPOSITORY>:<DOCKER_TAG>
+docker tag onyekaonu/jenkins:2.426.1-lts-jdk11 tooling.artifactory.onyekaonu.site/jenkins/onyekaonu/jenkins:2.426.1-lts-jdk11
 ```
 
-- Push the docker image to Artifactory
+4. Push the docker image to Artifactory. Push your image using the following command
 ```
-docker push tooling.artifactory.onyeka.ga/tooling/onyekaonu/jenkins:2.387.2-lts-jdk11.01
-```
-
-- Pull the docker image from Artifactory
-```
-docker push tooling.artifactory.onyeka.ga/tooling/onyekaonu/jenkins:2.387.2-lts-jdk11.01
+docker push artprod.mycompany/<DOCKER_REPOSITORY>:<DOCKER_TAG>
+docker push tooling.artifactory.onyekaonu.site/jenkins/onyekaonu/jenkins:2.426.1-lts-jdk11
 ```
 
-- Run docker commands to build, tag and push the docker image to my artifactory repository and pull from there.
-
-Tag the image so that it can pushed to Artifactory. The image below shows how to get the repository URL address. 
+5. Pull your image using the following command
+```
+docker pull / push <Artifactory Host IP Address>/<REPOSITORY_KEY>/<IMAGE>:<TAG>
+docker pull artprod.mycompany/<DOCKER_REPOSITORY>:<DOCKER_TAG>
+docker pull tooling.artifactory.onyekaonu.site/jenkins/onyekaonu/jenkins:2.426.1-lts-jdk11
+```
 
 ## Jenkins pipeline for Business Applications
 
@@ -187,7 +216,7 @@ Lets go through each of the steps.
 
 ![jenkins page](./images/jenkins-page.PNG)
 
-5. Ensure that you are able to logon to Jenkiins.
+5. Ensure that you are able to logon to Jenkins.
 ```
 $ kubectl exec -it jenkins-0 -c jenkins -n tools -- bash
 jenkins@jenkins-0:/$ ls
@@ -359,10 +388,10 @@ controller:
         - tooling.jenkins.sandbox.svc.darey.io
 
   installPlugins:
-    - kubernetes:3600.v144b_cd192ca_a_
-    - workflow-aggregator:581.v0c46fa_697ffd
-    - git:4.11.3
-    - configuration-as-code:1429.v09b_044a_c93de
+    - kubernetes:4029.v5712230ccb_f8
+    - workflow-aggregator:596.v8c21c963d92d
+    - git:5.1.0
+    - configuration-as-code:1670.v564dc8b_982d0
 
   additionalPlugins: []
 ```
@@ -371,12 +400,11 @@ If you need to include more plugins, you can use the **additionalPlugins: []** k
 
 ```
   additionalPlugins:
-    - blueocean:1.27.3
-    - credentials-binding:1.24
-    - git-changelog:3.0
-    - git-client:3.6.0
-    - git-server:1.9
-    - git:4.5.1
+    - blueocean:1.27.9
+    - credentials-binding:642.v737c34dea_6c2
+    - git-changelog:3.35
+    - git-client:4.5.0
+    - git-server:99.va_0826a_b_cdfa_d
 ```
 
 If you are wondering how to get the correct plugin version number, it is already provided on the same website where each plugin is documented at https://plugins.jenkins.io/
@@ -568,18 +596,18 @@ Ensure that all the installed plugins are using the latest version. Visit https:
 
 - Update the Dockerfile with below content
 ```
-FROM jenkins/jenkins:2.387.2-lts-jdk11
+FROM jenkins/jenkins:2.426.1-lts-jdk11
 
-COPY --chown=jenkins:jenkins scripts/plugins2.txt /usr/share/jenkins/ref/plugins2.txt
+COPY --chown=jenkins:jenkins scripts/plugins3.txt /usr/share/jenkins/ref/plugins3.txt
 
-RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins2.txt
+RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins3.txt
 ```
 
 - Run docker commands to build, tag and push the docker image to my dockerhub account and pull from there first.
 ```
-docker build . -t onyekaonu/jenkins:2.387.2-lts-jdk11.01
+docker build . -t onyekaonu/jenkins:2.426.1-lts-jdk11
 
-docker push onyekaonu/jenkins:2.387.2-lts-jdk11.01
+docker push onyekaonu/jenkins:2.426.1-lts-jdk11
 ```
 
 - Update the Jenkins helm values and point the new image to the private docker registry for Jenkins.
@@ -668,14 +696,19 @@ First we need to create the credential to connect to the Github account where th
 
 Follow the below steps. NOTE: There is minimal guide on how to do the things listed below
 
-1. Create an access token from GitHub so that Jenkins can use it to connect to the Github account. https://github.com/settings/tokens 
-2. Using base64, encode the generated token Z2hwX0hZbFZMcXpaR2o2b0ZUdUkzWDFQYWJTNFJxcEhQdDBIVzJsUw==
-3. Create a secret in the same namespace where Jenkins is installed - tools. Name the key github or whatever you wish. It doesn’t matter what it is called. But, take note of the name you use becuase it will be used elsewhere. See an example below. Replace the value with the encoded token you created earlier.
+1. Create an access token from GitHub so that Jenkins can use it to connect to the Github account. https://github.com/settings/tokens
+
+2. Using base64, encode the generated token
+
+Z2hwX2VWanNscjJ4NWdJamNkdnFYdXJhVDFObHlmVTdwZDFSTjhWbg==
+
+3. Create a secret in the same namespace where Jenkins is installed - tools. Name the key github or whatever you wish. It doesn’t matter what it is called. But, take note of the name you used because it will be used elsewhere. See an example below. Replace the value with the encoded token you created earlier.
 ```
 apiVersion: v1
 kind: Secret
 metadata:
   name: github
+  namespace: tools
 type: Opaque
 data:
   github_token: Z2hwX0hZbFZMcXpaR2o2b0ZUdUkzWDFQYWJTNFJxcEhQdDBIVzJsUw==
@@ -687,12 +720,11 @@ kubectl apply -f jenkins-secret.yaml -n tools
 
 In the Jenkins values file, you will set the values correctly so that the secret created above can be used. If you click here to see the documentation in artifacthub.io https://artifacthub.io/packages/helm/jenkinsci/jenkins?modal=values&path=controller.initScripts, as shown in the image below.
 
-
 Let’s analyse what is written there.
 
 - **‘name’ is a name of an existing secret in same namespace as jenkins**. This refers to the secret created above. **github**
 - **‘keyName’ is the name of one of the keys inside current secret**. This refers to the key specified in the secret. **github_token**
-- **the ‘name’ and ‘keyName’ are concatenated with a ‘-‘ in between**, so for example:. Therefore we will have this **github-github_token**
+- **the ‘name’ and ‘keyName’ are concatenated with a ‘-‘ in between**. Therefore we will have this **github-github_token**
 
 In the values file, we now need to update the key additionalExistingSecrets:
 ```
@@ -805,8 +837,10 @@ This implementation is ideal, and gives the confidence of a re-usable code and i
 Jenkins not executing jobs (build executor offline, pending - waiting for next executor) 
 
 ### Solution
-go to Jenkins -> Manage Jenkins -> Manage Nodes
-examine the "master" node.(Click on configure icon)
+go to Jenkins -> Manage Jenkins -> Nodes -> Built-In Node -> Configure
+
+Examine the "Number of executors". (Click on configure icon)
+
 The number of executors was set to 0. Increased it and issue got fixed.
 
 You should also explore the JCasC section and see all the configured credentials and pipelines.
@@ -817,6 +851,7 @@ You can now create more secrets to connect to other tools, such as Sonarqube, AW
 Now, attempt to configure a remote artifactory repository.
 
 1. Create a remote repository in Artifactory, so that instead of pulling helm charts directly from https://charts.jenkins.io for example, you will pull directly from your configured remote repository in Artifactory. This helps organisations stay secure. Artifactroy will therefore be a proxy to pulling from the internet.
+
 2. Configure remote repository for the following chart repos, search the repos and try to install tools from them through the Artifactroy remote repository you have configured.
 
 ```

@@ -1,7 +1,7 @@
 
 controller:
   image: "onyekaonu/jenkins"
-  tag: "2.387.2-lts-jdk11.01"
+  tag: "2.426.1-lts-jdk11"
 
   ingress:
     enabled: true
@@ -10,11 +10,11 @@ controller:
       kubernetes.io/ingress.class: nginx
       cert-manager.io/cluster-issuer: "letsencrypt-prod"
   
-    hostName: tooling.jenkins.onyeka.ga
+    hostName: tooling.jenkins.onyekaonu.site
     tls:
-    - secretName: tooling.jenkins.onyeka.ga
+    - secretName: tooling.jenkins.onyekaonu.site
       hosts:
-        - tooling.jenkins.onyeka.ga
+        - tooling.jenkins.onyekaonu.site
 
   installPlugins: false
   additionalPlugins: []
@@ -27,16 +27,16 @@ controller:
     configScripts: 
       welcome-message: |
         jenkins:
-          systemMessage: Welcome to onyeka.ga Multi-tenant CI\CD server. This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
+          systemMessage: Welcome to onyekaonu.site Multi-tenant CI\CD server. This Jenkins is configured and managed strictly 'as code'. Please do not update Manually
       pipeline: |
         jobs:
           - script: >
-              folder('onyeka.ga') {
-                displayName('onyeka.ga')
-                description('Contains onyeka.ga Jenkins Pipelines')
+              folder('onyekaonu.site') {
+                displayName('onyekaonu.site')
+                description('Contains onyekaonu.site Jenkins Pipelines')
               }
           - script: >
-              multibranchPipelineJob('onyeka.ga/tooling-app') {
+              multibranchPipelineJob('onyekaonu.site/tooling-app') {
                 branchSources {
                   git {
                     remote('https://github.com/onyeka-hub/tooling.git')
