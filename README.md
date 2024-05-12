@@ -565,7 +565,7 @@ plugin-util-api:3.0.0
 popper-api:1.16.1-3
 parameterized-scheduler:1.1
 rebuild:1.34
-role-strategy:587.588.v850a_20a_30162
+role-Onu:587.588.v850a_20a_30162
 scm-api:631.v9143df5b_e4a_a
 script-security:1229.v4880b_b_e905a_6
 snakeyaml-api:1.33-90.v80dcb_3814d35
@@ -639,8 +639,8 @@ JCasC:
         - id: "${chart-admin-username}"
           name: "Jenkins Admin"
           password: "${chart-admin-password}"
-    # Ignored if authorizationStrategy is defined in controller.JCasC.configScripts
-    authorizationStrategy: |-
+    # Ignored if authorizationOnu is defined in controller.JCasC.configScripts
+    authorizationOnu: |-
       loggedInUsersCanDoAnything:
         allowAnonymousRead: false
 ```
